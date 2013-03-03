@@ -1,23 +1,3 @@
-/*
- * Copyright (C) 2005-2011 MaNGOS <http://www.getmangos.com/>
- * Copyright (C) 2008-2011 Trinity <http://www.trinitycore.org/>
- * Copyright (C) 2011-2013 Project SkyFire <http://www.projectskyfire.org/>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
- */
-
 #define _CRT_SECURE_NO_DEPRECATE
 
 #include "adt.h"
@@ -30,21 +10,28 @@ bool isHole(int holes, int i, int j)
 {
     int testi = i / 2;
     int testj = j / 4;
-    if (testi > 3) testi = 3;
-    if (testj > 3) testj = 3;
+    if(testi > 3) testi = 3;
+    if(testj > 3) testj = 3;
     return (holes & holetab_h[testi] & holetab_v[testj]) != 0;
 }
 
 //
 // Adt file loader class
 //
-ADT_file::ADT_file(const char * filename, HANDLE _handle) : FileLoader(filename, _handle)
+ADT_file::ADT_file()
 {
     a_grid = 0;
 }
 
 ADT_file::~ADT_file()
 {
+    free();
+}
+
+void ADT_file::free()
+{
+    a_grid = 0;
+    FileLoader::free();
 }
 
 //
@@ -57,36 +44,31 @@ bool ADT_file::prepareLoadedData()
         return false;
 
     // Check and prepare MHDR
-    a_grid = (adt_MHDR *)(buffer+8+version->size);
+    a_grid = (adt_MHDR *)(GetData()+8+version->size);
     if (!a_grid->prepareLoadedData())
         return false;
 
-    //mcnk_offsets
-    int ptr = 0;
-    int found = 0;
-    while (ptr < size)
+    // funny offsets calculations because there is no mapping for them and they have variable lengths
+    uint8* ptr = (uint8*)a_grid + a_grid->size + 8;
+    uint32 mcnk_count = 0;
+    memset(cells, 0, ADT_CELLS_PER_GRID * ADT_CELLS_PER_GRID * sizeof(adt_MCNK*));
+    while (ptr < GetData() + GetDataSize())
     {
-        if ((buffer + ptr)[0] == 'K' &&
-           (buffer + ptr)[1] == 'N' &&
-           (buffer + ptr)[2] == 'C' &&
-           (buffer + ptr)[3] == 'M')
+        uint32 header = *(uint32*)ptr;
+        uint32 size = *(uint32*)(ptr + 4);
+        if (header == 'MCNK')
         {
-            adt_MCNK * mcnk = (adt_MCNK*)(buffer + ptr);
-            assert(mcnk->iy < ADT_CELLS_PER_GRID);
-            assert(mcnk->ix < ADT_CELLS_PER_GRID);
-            mcnk_offsets[mcnk->iy][mcnk->ix] = mcnk;
-            ptr += 4;//go to size
-            ptr += 4 + *((uint32*)(buffer + ptr));//skip all datas AND size.
-            found ++;
-            mcnk->prepareLoadedData();
+            cells[mcnk_count / ADT_CELLS_PER_GRID][mcnk_count % ADT_CELLS_PER_GRID] = (adt_MCNK*)ptr;
+            ++mcnk_count;
         }
-        else
-        {
-            ptr += 4;//go to size
-            ptr += 4 + *((uint32*)(buffer + ptr)); //skip all datas AND size.
-        }
+
+        // move to next chunk
+        ptr += size + 8;
     }
-    assert(found == 256);
+
+    if (mcnk_count != ADT_CELLS_PER_GRID * ADT_CELLS_PER_GRID)
+        return false;
+
     return true;
 }
 
@@ -96,6 +78,10 @@ bool adt_MHDR::prepareLoadedData()
         return false;
 
     if (size!=sizeof(adt_MHDR)-8)
+        return false;
+
+    // Check and prepare MCIN
+    if (offsMCIN && !getMCIN()->prepareLoadedData())
         return false;
 
     // Check and prepare MH2O
@@ -113,7 +99,7 @@ bool adt_MCIN::prepareLoadedData()
     // Check cells data
     for (int i=0; i<ADT_CELLS_PER_GRID;i++)
         for (int j=0; j<ADT_CELLS_PER_GRID;j++)
-            if (cells[i][j].offsMCNK && !getMCNK(i, j)->prepareLoadedData())
+            if (cells[i][j].offsMCNK && !getMCNK(i,j)->prepareLoadedData())
                 return false;
 
     return true;

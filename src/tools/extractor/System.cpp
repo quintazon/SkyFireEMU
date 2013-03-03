@@ -73,21 +73,26 @@ float CONF_float_to_int16_limit = 2048.0f;   // Max accuracy = val/65536
 float CONF_flat_height_delta_limit = 0.005f; // If max - min less this value - surface is flat
 float CONF_flat_liquid_delta_limit = 0.001f; // If max - min less this value - liquid surface is flat
 
-uint32 CONF_TargetBuild = 15595;              // 4.3.4.15595
+uint32 CONF_TargetBuild = 16516;              // 5.1.0a 16516
 
 // List MPQ for extract maps from
 char const* CONF_mpq_list[]=
 {
     "world.MPQ",
-    "art.MPQ",
-    "world2.MPQ",
+    "base-Win.MPQ",
+    "misc.MPQ",
+    "alternate.MPQ",
+    "itemtexture.MPQ",
+    "texture.MPQ",
     "expansion1.MPQ",
     "expansion2.MPQ",
     "expansion3.MPQ",
+    "expansion4.MPQ",
 };
 
-uint32 const Builds[] = {13164, 13205, 13287, 13329, 13596, 13623, 13914, 14007, 14333, 14480, 14545, 15005, 15050, 15211, 15354, 15595, 0};
-#define LAST_DBC_IN_DATA_BUILD 13623    // after this build mpqs with dbc are back to locale folder
+uint32 const Builds[] = {16016, 16048, 16057, 16309, 16357, 16516, 0};
+
+#define LAST_DBC_IN_DATA_BUILD 16516    // after this build mpqs with dbc are back to locale folder
 
 char* const Locales[] = {"enGB", "enUS", "deDE", "esES", "frFR", "koKR", "zhCN", "zhTW", "enCN", "enTW", "esMX", "ruRU"};
 TCHAR* const LocalesT[] =
@@ -297,34 +302,34 @@ void ReadAreaTableDBC()
     printf("Done! (%zu areas loaded)\n", area_count);
 }
 
-void ReadLiquidTypeTableDBC()
-{
-    printf("Read LiquidType.dbc file...");
-    HANDLE dbcFile;
-    if (!SFileOpenFileEx(LocaleMpq, "DBFilesClient\\LiquidType.dbc", SFILE_OPEN_PATCHED_FILE, &dbcFile))
-    {
-        printf("Fatal error: Cannot find LiquidType.dbc in archive!\n");
-        exit(1);
-    }
-
-    DBCFile dbc(dbcFile);
-    if(!dbc.open())
-    {
-        printf("Fatal error: Invalid LiquidType.dbc file format!\n");
-        exit(1);
-    }
-
-    size_t liqTypeCount = dbc.getRecordCount();
-    size_t liqTypeMaxId = dbc.getMaxId();
-    LiqType = new uint16[liqTypeMaxId + 1];
-    memset(LiqType, 0xff, (liqTypeMaxId + 1) * sizeof(uint16));
-
-    for(uint32 x = 0; x < liqTypeCount; ++x)
-        LiqType[dbc.getRecord(x).getUInt(0)] = dbc.getRecord(x).getUInt(3);
-
-    SFileCloseFile(dbcFile);
-    printf("Done! (%u LiqTypes loaded)\n", liqTypeCount);
-}
+//void ReadLiquidTypeTableDBC()
+//{
+//    printf("Read LiquidType.dbc file...");
+//    HANDLE dbcFile;
+//    if (!SFileOpenFileEx(LocaleMpq, "DBFilesClient\\LiquidType.dbc", SFILE_OPEN_PATCHED_FILE, &dbcFile))
+//    {
+//        printf("Fatal error: Cannot find LiquidType.dbc in archive!\n");
+//        exit(1);
+//    }
+//
+//    DBCFile dbc(dbcFile);
+//    if(!dbc.open())
+//    {
+//        printf("Fatal error: Invalid LiquidType.dbc file format!\n");
+//        exit(1);
+//    }
+//
+//    size_t liqTypeCount = dbc.getRecordCount();
+//    size_t liqTypeMaxId = dbc.getMaxId();
+//    LiqType = new uint16[liqTypeMaxId + 1];
+//    memset(LiqType, 0xff, (liqTypeMaxId + 1) * sizeof(uint16));
+//
+//    for(uint32 x = 0; x < liqTypeCount; ++x)
+//        LiqType[dbc.getRecord(x).getUInt(0)] = dbc.getRecord(x).getUInt(3);
+//
+//    SFileCloseFile(dbcFile);
+//    printf("Done! (%u LiqTypes loaded)\n", liqTypeCount);
+//}
 
 //
 // Adt file convertor function and data
@@ -947,7 +952,7 @@ void ExtractMapsFromMpq(uint32 build)
     uint32 map_count = ReadMapDBC();
 
     ReadAreaTableDBC();
-    ReadLiquidTypeTableDBC();
+//    ReadLiquidTypeTableDBC();
 
     std::string path = output_path;
     path += "/maps/";
@@ -1121,7 +1126,7 @@ bool LoadLocaleMPQFile(int locale)
         else
         {
             prefix = Locales[locale];
-            _stprintf(buff, _T("%s/Data/wow-update-%u.MPQ"), input_path, Builds[i]);
+            _stprintf(buff, _T("%s/Data/wow-update-base-%u.MPQ"), input_path, Builds[i]);
         }
 
         if (!SFileOpenPatchArchive(LocaleMpq, buff, prefix, 0))
@@ -1149,8 +1154,8 @@ void LoadCommonMPQFiles(uint32 build)
     int count = sizeof(CONF_mpq_list) / sizeof(char*);
     for (int i = 1; i < count; ++i)
     {
-        if (build < 15211 && !strcmp("world2.MPQ", CONF_mpq_list[i]))   // 4.3.2 and higher MPQ
-            continue;
+        //if (build < 15211 && !strcmp("world2.MPQ", CONF_mpq_list[i]))   // 4.3.2 and higher MPQ
+        //    continue;
 
         _stprintf(filename, _T("%s/Data/%s"), input_path, CONF_mpq_list[i]);
         if (!SFileOpenPatchArchive(WorldMpq, filename, "", 0))
@@ -1177,7 +1182,7 @@ void LoadCommonMPQFiles(uint32 build)
         else
         {
             prefix = "base";
-            _stprintf(filename, _T("%s/Data/wow-update-%u.MPQ"), input_path, Builds[i]);
+            _stprintf(filename, _T("%s/Data/wow-update-base-%u.MPQ"), input_path, Builds[i]);
         }
 
         if (!SFileOpenPatchArchive(WorldMpq, filename, prefix, 0))

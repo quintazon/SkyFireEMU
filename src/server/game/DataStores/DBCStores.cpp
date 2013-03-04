@@ -664,12 +664,12 @@ void LoadDBCStores(const std::string& dataPath, uint32& availableDbcLocales)
     }
 
     // Check loaded DBC files proper version
-    if (!sAreaStore.LookupEntry(4445)              ||       // last area (areaflag) added in 4.0.6a
-        !sCharTitlesStore.LookupEntry(229)         ||       // last char title added in 4.0.6a
-        !sGemPropertiesStore.LookupEntry(1858)     ||       // last gem property added in 4.0.6a
-        !sItemExtendedCostStore.LookupEntry(3400)  ||       // last item extended cost added in 4.0.6a
-        !sMapStore.LookupEntry(767)                ||       // last map added in 4.0.6a
-        !sSpellStore.LookupEntry(96539)            )        // last added spell in 4.0.6a
+    if (!sAreaStore.LookupEntry(6539)              ||       // last area (areaflag) added in 5.1.0
+        !sCharTitlesStore.LookupEntry(319)         ||       // last char title added in 5.1.0
+        !sGemPropertiesStore.LookupEntry(2402)     ||       // last gem property added in 5.1.0
+        //!sItemExtendedCostStore.LookupEntry(3400)  ||       // last item extended cost added in 4.0.6a
+        !sMapStore.LookupEntry(1076)                ||       // last map added in 5.1.0
+        !sSpellStore.LookupEntry(131203)            )        // last added spell in 5.1.0
     {
         sLog->outError("You have _outdated_ DBC files. Please extract correct versions from current using client.");
         exit(1);
@@ -801,6 +801,8 @@ ContentLevels GetContentLevelsForMapAndZone(uint32 mapid, uint32 zoneId)
             return CONTENT_71_80;
         case 3:
             return CONTENT_81_85;
+        case 4:
+            return CONTENT_85_90;
         default:
             return CONTENT_1_60;
     }

@@ -54,6 +54,17 @@ namespace AuthHelper
         return false;
     }
 
+    bool IsPostCataclysmAcceptedClientBuild(int build)
+    {
+        int accepted_versions[] = POST_CATACLYSM_ACCEPTED_CLIENT_BUILD;
+
+        for (int i = 0; accepted_versions[i]; ++i)
+            if (build == accepted_versions[i])
+                return true;
+
+        return false;
+    }
+
     bool IsAcceptedClientBuild(int build)
     {
         return (IsPostWotLKAcceptedClientBuild(build) || IsPostBCAcceptedClientBuild(build) || IsPreBCAcceptedClientBuild(build));

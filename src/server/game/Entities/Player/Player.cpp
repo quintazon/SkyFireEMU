@@ -1003,7 +1003,7 @@ bool Player::Create(uint32 guidlow, CharacterCreateInfo* createInfo)
     SetUInt32Value(PLAYER_GUILDRANK, 0);
     SetUInt32Value(PLAYER_GUILD_TIMESTAMP, 0);
     SetUInt32Value(PLAYER_GUILDDELETE_DATE, 0);
-    SetUInt32Value(PLAYER_GUILDLEVEL, 1);
+    SetUInt32Value(PLAYER_GUILDLEVEL, 0);
 
     for (int i = 0; i < KNOWN_TITLES_SIZE; ++i)
         SetUInt64Value(PLAYER__FIELD_KNOWN_TITLES + i, 0);  // 0=disabled
@@ -2656,8 +2656,6 @@ void Player::Regenerate(Powers power)
 }
 
 void Player::RegenerateHealth()
-// Dispite what many have argued in terms of spirit effecting health regen, patch notes for patch 4.0.1 specifically state health regen rate does NOT effect health regen rates!!
-// Furthermore, statistical data retrieved from live servers indicates previous hp regen calculations are far from accurate with cataclysm system
 {
     uint32 curValue = GetHealth();
     uint32 maxValue = GetMaxHealth();
@@ -2666,12 +2664,6 @@ void Player::RegenerateHealth()
         return;
 
     float HealthIncreaseRate = sWorld->getRate(RATE_HEALTH);
-
-    if (getLevel() < 20) // Health regen is much higher % while under level 20
-        HealthIncreaseRate = sWorld->getRate(RATE_HEALTH) * ((25.0f - getLevel()) / (100.0f + getLevel())); // As close as possible to statistical data retrieved from live servers - Will need update when actual formula is discovered!!!
-    else // Once above 20, health regen is a base flat 1% of max hp (other auras and items can increase this)
-        HealthIncreaseRate = sWorld->getRate(RATE_HEALTH) * .01f; // Identical to statistical data retrieved through lvl 85
-
     float addvalue = 0.0f;
 
     // polymorphed case
@@ -2680,9 +2672,14 @@ void Player::RegenerateHealth()
     // normal regen case (maybe partly in combat case)
     else if (!isInCombat() || HasAuraType(SPELL_AURA_MOD_REGEN_DURING_COMBAT))
     {
-        addvalue = (float)GetMaxHealth()*HealthIncreaseRate; // Cataclysm is now flat % based regen based on max HP
+        addvalue = HealthIncreaseRate;
         if (!isInCombat())
         {
+            if (getLevel() < 15)
+                addvalue = (0.20f*((float)GetMaxHealth())/getLevel()*HealthIncreaseRate);
+            else
+                addvalue = 0.015f*((float)GetMaxHealth())*HealthIncreaseRate;
+
             AuraEffectList const& mModHealthRegenPct = GetAuraEffectsByType(SPELL_AURA_MOD_HEALTH_REGEN_PERCENT);
             for (AuraEffectList::const_iterator i = mModHealthRegenPct.begin(); i != mModHealthRegenPct.end(); ++i)
                 AddPctN(addvalue, (*i)->GetAmount());
@@ -2693,10 +2690,10 @@ void Player::RegenerateHealth()
             ApplyPctN(addvalue, GetTotalAuraModifier(SPELL_AURA_MOD_REGEN_DURING_COMBAT));
 
         if (!IsStandState())
-            addvalue *= 1.333333f; // Regen is 33% faster while sitting
+            addvalue *= 1.5f; // Regen is faster while sitting
 
         if (RACE_TROLL)
-            addvalue *= 1.1f; // Trolls Regen 10% Faster
+            addvalue *= 1.1f; // Trolls Regen 10% Faster 
     }
 
     // always regeneration bonus (including combat)
@@ -6537,8 +6534,8 @@ void Player::UpdateSkillsForLevel()
         if (GetSkillRangeType(pSkill, false) != SKILL_RANGE_LEVEL)
             continue;
 
-		if (IsWeaponSkill(pSkill->id))
-			continue;
+        if (IsWeaponSkill(pSkill->id))
+            continue;
 
         uint32 valueIndex = PLAYER_SKILL_VALUE_INDEX(itr->second.pos);
         uint32 data = GetUInt32Value(valueIndex);
@@ -7578,6 +7575,10 @@ void Player::ModifyCurrency(uint32 id, int32 count)
         oldTotalCount = itr->second.totalCount;
         oldWeekCount = itr->second.weekCount;
     }
+
+    float mod = float(GetMaxPositiveAuraModifierByMiscValue(SPELL_AURA_MODIFY_CURRENCY_GAIN,int32(id)));
+    if (count > 0)
+        count += int32(floor(count * (mod/100)));
 
     int32 newTotalCount = oldTotalCount + count;
     if (newTotalCount < 0)
@@ -9971,6 +9972,7 @@ void Player::SendInitWorldStates(uint32 zoneid, uint32 areaid)
         case 1519:                                          // Stormwind City
         case 1537:                                          // Ironforge
         case 2257:                                          // Deeprun Tram
+        case 3703:                                          // Shattrath City		
             break;
         case 139:                                           // Eastern Plaguelands
             if (pvp && pvp->GetTypeId() == OUTDOOR_PVP_EP)
@@ -10377,7 +10379,6 @@ void Player::SendInitWorldStates(uint32 zoneid, uint32 areaid)
                 data << uint32(3610) << uint32(0x0);           // 9 show
             }
             break;
-        case 3703:                                          // Shattrath City
         case 4384:                                          // Strand of the Ancients
             if (bg && bg->GetTypeID(true) == BATTLEGROUND_SA)
                 bg->FillInitialWorldStates(data);
@@ -15868,7 +15869,7 @@ void Player::RewardQuest(Quest const *quest, uint32 reward, Object* questGiver, 
 
     for (int8 i = 0; i < QUEST_CURRENCY_COUNT; ++i)
         if (quest->RewCurrencyId[i] && quest->RewCurrencyCount[i])
-            ModifyCurrency(quest->RewCurrencyId[i], quest->RewCurrencyCount[i]);
+            ModifyCurrency(quest->RewCurrencyId[i], quest->RewCurrencyCount[i] * PLAYER_CURRENCY_PRECISION);
 
     uint16 log_slot = FindQuestSlot(quest_id);
     if (log_slot < MAX_QUEST_LOG_SIZE)
@@ -15902,7 +15903,7 @@ void Player::RewardQuest(Quest const *quest, uint32 reward, Object* questGiver, 
         if (guildRep < 1)
             guildRep = 1;
 
-        guild->GainXP(guildXP);
+        guild->GainXP(guildXP, this);
         GetReputationMgr().ModifyReputation(sFactionStore.LookupEntry(1168), guildRep);
     }
 
@@ -17572,7 +17573,7 @@ bool Player::LoadFromDB(uint32 guid, SQLQueryHolder *holder)
     SetUInt32Value(PLAYER_GUILDRANK, 0);
     SetUInt32Value(PLAYER_GUILD_TIMESTAMP, 0);
     SetUInt32Value(PLAYER_GUILDDELETE_DATE, 0);
-    SetUInt32Value(PLAYER_GUILDLEVEL, 1);
+    SetUInt32Value(PLAYER_GUILDLEVEL, 0);
 
     uint32 money = fields[8].GetUInt32();
     if (money > MAX_MONEY_AMOUNT)
@@ -21801,6 +21802,9 @@ bool Player::BuyItemFromVendorSlot(uint64 vendorguid, uint32 vendorslot, uint32 
 
         // reputation discount
         price = uint32(floor(price * GetReputationPriceDiscount(creature)));
+        //aura discount
+        float auraMod = float(GetTotalAuraModifier(SPELL_AURA_REDUCE_BUY_PRICES));
+        price -= uint32(floor(price * (auraMod/100)));
 
         if (!HasEnoughMoney(price))
         {
@@ -26304,6 +26308,7 @@ void Player::SetInGuild(uint32 GuildId)
         SetUInt64Value(OBJECT_FIELD_DATA, 0);
         SetUInt32Value(OBJECT_FIELD_TYPE, GetUInt32Value(OBJECT_FIELD_TYPE) & ~TYPEMASK_IN_GUILD);
     }
+    ApplyModFlag(PLAYER_FLAGS, PLAYER_FLAGS_GLEVEL_ENABLED, GuildId != 0 && sWorld->getBoolConfig(CONFIG_GUILD_ADVANCEMENT_ENABLED));
 }
 
 bool Player::IsInWhisperWhiteList(uint64 guid)

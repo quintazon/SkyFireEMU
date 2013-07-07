@@ -626,7 +626,7 @@ bool ConditionMgr::CanHaveSourceGroupSet(ConditionSourceType sourceType) const
             sourceType == CONDITION_SOURCE_TYPE_VEHICLE_SPELL ||
             sourceType == CONDITION_SOURCE_TYPE_SPELL_IMPLICIT_TARGET ||
             sourceType == CONDITION_SOURCE_TYPE_SPELL_CLICK_EVENT ||
-            sourceType == CONDITION_SOURCE_TYPE_SMART_EVENT) ||
+            sourceType == CONDITION_SOURCE_TYPE_SMART_EVENT ||
             sourceType == CONDITION_SOURCE_TYPE_PHASE_DEFINITION);
 }
 
@@ -1431,7 +1431,7 @@ bool ConditionMgr::isSourceTypeValid(Condition* cond)
         case CONDITION_SOURCE_TYPE_PHASE_DEFINITION:
             if (!PhaseMgr::IsConditionTypeSupported(cond->ConditionType))
             {
-                sLog->outError(LOG_FILTER_CONDITIONSYS, "Condition source type `CONDITION_SOURCE_TYPE_PHASE_DEFINITION` does not support condition type %u, ignoring.", cond->ConditionType);
+                sLog->outErrorDb("Condition source type `CONDITION_SOURCE_TYPE_PHASE_DEFINITION` does not support condition type %u, ignoring.", cond->ConditionType);
                 return false;
             }
             break;

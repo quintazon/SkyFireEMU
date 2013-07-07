@@ -9242,7 +9242,7 @@ void ObjectMgr::LoadPhaseDefinitions()
 
     if (!result)
     {
-        sLog->outError(LOG_FILTER_DATABASE_AI, ">> Loaded 0 phasing definitions. DB table `phase_definitions` is empty.");
+        sLog->outError(">> Loaded 0 phasing definitions. DB table `phase_definitions` is empty.");
         return;
     }
 
@@ -9264,7 +9264,7 @@ void ObjectMgr::LoadPhaseDefinitions()
         // Checks
         if ((PhaseDefinition.flags & PHASE_FLAG_OVERWRITE_EXISTING) && (PhaseDefinition.flags & PHASE_FLAG_NEGATE_PHASE))
         {
-            sLog->outError(LOG_FILTER_DATABASE_AI, "Flags defined in phase_definitions in zoneId %d and entry %u does contain PHASE_FLAG_OVERWRITE_EXISTING and PHASE_FLAG_NEGATE_PHASE. Setting flags to PHASE_FLAG_OVERWRITE_EXISTING", PhaseDefinition.zoneId, PhaseDefinition.entry);
+            sLog->outError("Flags defined in phase_definitions in zoneId %d and entry %u does contain PHASE_FLAG_OVERWRITE_EXISTING and PHASE_FLAG_NEGATE_PHASE. Setting flags to PHASE_FLAG_OVERWRITE_EXISTING", PhaseDefinition.zoneId, PhaseDefinition.entry);
             PhaseDefinition.flags &= ~PHASE_FLAG_NEGATE_PHASE;
         }
 
@@ -9288,7 +9288,7 @@ void ObjectMgr::LoadSpellPhaseInfo()
 
     if (!result)
     {
-        sLog->outError(LOG_FILTER_DATABASE_AI, ">> Loaded 0 spell dbc infos. DB table `spell_phase` is empty.");
+        sLog->outError(">> Loaded 0 spell dbc infos. DB table `spell_phase` is empty.");
         return;
     }
 
@@ -9303,13 +9303,13 @@ void ObjectMgr::LoadSpellPhaseInfo()
         SpellInfo const* spell = sSpellMgr->GetSpellInfo(spellPhaseInfo.spellId);
         if (!spell)
         {
-            sLog->outError(LOG_FILTER_DATABASE_AI, "Spell %u defined in `spell_phase` does not exists, skipped.", spellPhaseInfo.spellId);
+            sLog->outError("Spell %u defined in `spell_phase` does not exists, skipped.", spellPhaseInfo.spellId);
             continue;
         }
 
         if (!spell->HasAura(SPELL_AURA_PHASE))
         {
-            sLog->outError(LOG_FILTER_DATABASE_AI, "Spell %u defined in `spell_phase` does not have aura effect type SPELL_AURA_PHASE, useless value.", spellPhaseInfo.spellId);
+            sLog->outError("Spell %u defined in `spell_phase` does not have aura effect type SPELL_AURA_PHASE, useless value.", spellPhaseInfo.spellId);
             continue;
         }
 

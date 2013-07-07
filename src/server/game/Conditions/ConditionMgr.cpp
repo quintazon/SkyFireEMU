@@ -626,7 +626,8 @@ bool ConditionMgr::CanHaveSourceGroupSet(ConditionSourceType sourceType) const
             sourceType == CONDITION_SOURCE_TYPE_VEHICLE_SPELL ||
             sourceType == CONDITION_SOURCE_TYPE_SPELL_IMPLICIT_TARGET ||
             sourceType == CONDITION_SOURCE_TYPE_SPELL_CLICK_EVENT ||
-            sourceType == CONDITION_SOURCE_TYPE_SMART_EVENT);
+            sourceType == CONDITION_SOURCE_TYPE_SMART_EVENT) ||
+            sourceType == CONDITION_SOURCE_TYPE_PHASE_DEFINITION);
 }
 
 bool ConditionMgr::CanHaveSourceIdSet(ConditionSourceType sourceType) const
@@ -698,6 +699,23 @@ ConditionList ConditionMgr::GetConditionsForSmartEvent(int32 entryOrGuid, uint32
             sLog->outDebug(LOG_FILTER_CONDITIONSYS, "GetConditionsForSmartEvent: found conditions for Smart Event entry or guid %d event_id %u", entryOrGuid, eventId);
         }
     }
+    return cond;
+}
+
+ConditionList ConditionMgr::GetConditionsForPhaseDefinition(uint32 zone, uint32 entry)
+{
+    ConditionList cond;
+    PhaseDefinitionConditionContainer::const_iterator itr = PhaseDefinitionsConditionStore.find(zone);
+    if (itr != PhaseDefinitionsConditionStore.end())
+    {
+        ConditionTypeContainer::const_iterator i = (*itr).second.find(entry);
+        if (i != (*itr).second.end())
+        {
+            cond = (*i).second;
+            sLog->outDebug(LOG_FILTER_CONDITIONSYS, "GetConditionsForPhaseDefinition: found conditions for zone %u entry %u spell %u", zone, entry);
+        }
+    }
+
     return cond;
 }
 
@@ -912,6 +930,13 @@ void ConditionMgr::LoadConditions(bool isReload)
                     ++count;
                     continue;
                 }
+                case CONDITION_SOURCE_TYPE_PHASE_DEFINITION:
+                {
+                    PhaseDefinitionsConditionStore[cond->SourceGroup][cond->SourceEntry].push_back(cond);
+                    valid = true;
+                    ++count;
+                    continue;
+                    }
                 default:
                     break;
             }
@@ -1400,6 +1425,13 @@ bool ConditionMgr::isSourceTypeValid(Condition* cond)
             if (!sSpellMgr->GetSpellInfo(cond->SourceEntry))
             {
                 sLog->outErrorDb("SourceEntry %u in `condition` table, does not exist in `spell.dbc`, ignoring.", cond->SourceEntry);
+                return false;
+            }
+            break;
+        case CONDITION_SOURCE_TYPE_PHASE_DEFINITION:
+            if (!PhaseMgr::IsConditionTypeSupported(cond->ConditionType))
+            {
+                sLog->outError(LOG_FILTER_CONDITIONSYS, "Condition source type `CONDITION_SOURCE_TYPE_PHASE_DEFINITION` does not support condition type %u, ignoring.", cond->ConditionType);
                 return false;
             }
             break;
@@ -1970,6 +2002,19 @@ void ConditionMgr::Clean()
     }
 
     SpellClickEventConditionStore.clear();
+
+    for (PhaseDefinitionConditionContainer::iterator itr = PhaseDefinitionsConditionStore.begin(); itr != PhaseDefinitionsConditionStore.end(); ++itr)
+    {
+        for (ConditionTypeContainer::iterator it = itr->second.begin(); it != itr->second.end(); ++it)
+        {
+            for (ConditionList::const_iterator i = it->second.begin(); i != it->second.end(); ++i)
+                delete *i;
+            it->second.clear();
+        }
+        itr->second.clear();
+    }
+
+    PhaseDefinitionsConditionStore.clear();
 
     // this is a BIG hack, feel free to fix it if you can figure out the ConditionMgr ;)
     for (std::list<Condition*>::const_iterator itr = AllocatedMemoryStore.begin(); itr != AllocatedMemoryStore.end(); ++itr)

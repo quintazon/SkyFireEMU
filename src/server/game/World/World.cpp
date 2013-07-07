@@ -1459,6 +1459,9 @@ void World::SetInitialWorldSettings()
     sLog->outString("Loading Spell Group Stack Rules...");
     sSpellMgr->LoadSpellGroupStackRules();
 
+    sLog->outString("Loading Spell Phase Dbc Info...");
+    sObjectMgr->LoadSpellPhaseInfo();
+
     sLog->outString("Loading NPC Texts...");
     sObjectMgr->LoadGossipText();
 
@@ -1706,6 +1709,9 @@ void World::SetInitialWorldSettings()
 
     sLog->outString("Loading World States...");              // must be loaded before battleground, outdoor PvP and conditions
     LoadWorldStates();
+
+    sLog->outString("Loading Phase definitions...");
+    sObjectMgr->LoadPhaseDefinitions();
 
     sLog->outString("Loading Conditions...");
     sConditionMgr->LoadConditions();
@@ -3190,4 +3196,12 @@ CharacterNameData const* World::GetCharacterNameData(uint32 guid) const
         return &itr->second;
     else
         return NULL;
+}
+
+void World::UpdatePhaseDefinitions()
+{
+    SessionMap::const_iterator itr;
+    for (itr = m_sessions.begin(); itr != m_sessions.end(); ++itr)
+        if (itr->second && itr->second->GetPlayer() && itr->second->GetPlayer()->IsInWorld())
+            itr->second->GetPlayer()->GetPhaseMgr().NotifyStoresReloaded();
 }

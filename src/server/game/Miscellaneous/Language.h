@@ -175,7 +175,15 @@ enum SkyFireStrings
     LANGUAGE_YOURS_RUNIC_POWER_CHANGED      = 174,
     LANGUAGE_LIQUID_STATUS                  = 175,
     LANGUAGE_IS_NOTE                        = 176,
-    // Room for more level 1              176-199 not used
+    // Phasing
+    LANGUAGE_PHASING_REPORT_STATUS          = 177,
+    LANGUAGE_PHASING_NO_DEFINITIONS         = 178,              
+    LANGUAGE_PHASING_SUCCESS                = 179,
+    LANGUAGE_PHASING_FAILED                 = 180,
+    LANGUAGE_PHASING_LAST_PHASE             = 181,
+    LANGUAGE_PHASING_LIST                   = 182,
+    LANGUAGE_PHASING_PHASEMASK              = 183,
+    // Room for more level 1              184-199 not used
 
     // level 2 chat
     LANGUAGE_NO_SELECTION                   = 200,

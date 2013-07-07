@@ -89,6 +89,7 @@ public:
             { "update",        SEC_ADMINISTRATOR,  false, &HandleDebugUpdateCommand,          "", NULL },
             { "itemexpire",    SEC_ADMINISTRATOR,  false, &HandleDebugItemExpireCommand,      "", NULL },
             { "areatriggers",  SEC_ADMINISTRATOR,  false, &HandleDebugAreaTriggersCommand,    "", NULL },
+            { "phase",         SEC_ADMINISTRATOR,  false, &HandleDebugPhaseCommand,           "", NULL },
             { NULL,             0,                  false, NULL,                               "", NULL }
         };
         static ChatCommand commandTable[] =
@@ -946,8 +947,21 @@ public:
         if (!*args)
             return false;
 
-        uint32 PhaseShift = atoi(args);
-        handler->GetSession()->SendSetPhaseShift(PhaseShift);
+        char* t = strtok((char*)args, " ");
+        char* p = strtok(NULL, " ");
+
+        if (!t)
+            return false;
+
+        std::set<uint32> terrainswap;
+        std::set<uint32> phaseId;
+
+        terrainswap.insert((uint32)atoi(t));
+
+        if (p)
+            phaseId.insert((uint32)atoi(p));
+
+        handler->GetSession()->SendSetPhaseShift(phaseId, terrainswap);
         return true;
     }
 
@@ -1274,6 +1288,16 @@ public:
         target->SetUInt32Value(opcode,  value);
 
         handler->PSendSysMessage(LANGUAGE_SET_32BIT_FIELD, opcode, value);
+        return true;
+    }
+    static bool HandleDebugPhaseCommand(ChatHandler* handler, char const* args)
+    {
+        Unit* unit = handler->getSelectedUnit();
+        Player* player = handler->GetSession()->GetPlayer();
+        if(unit && unit->GetTypeId() == TYPEID_PLAYER)
+            player = unit->ToPlayer();
+
+        player->GetPhaseMgr().SendDebugReportToPlayer(handler->GetSession()->GetPlayer());
         return true;
     }
 };

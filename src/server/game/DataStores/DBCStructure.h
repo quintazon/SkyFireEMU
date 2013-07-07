@@ -2242,9 +2242,9 @@ struct WMOAreaTableEntry
 
 struct PhaseEntry
 {
-    uint32 ID;                                              // 0
-    char* Name;                                             // 1
-    uint32 phaseShift;                                      // 2
+    uint32  ID;                                             // 0
+    char*   Name;                                           // 1
+    uint32  flag;                                           // 2
 };
 
 struct WorldMapAreaEntry

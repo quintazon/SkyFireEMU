@@ -1699,8 +1699,8 @@ void WorldSession::HandleReadyForAccountDataTimes(WorldPacket& /*recvData*/)
 void WorldSession::SendSetPhaseShift(std::set<uint32> const& phaseIds, std::set<uint32> const& terrainswaps)
 {	
     WorldPacket data(SMSG_SET_PHASE_SHIFT, 1 + 8 + 4 + 4 + 4 + 4 + 2 * phaseIds.size() + 4 + terrainswaps.size() * 2);
-	data << uint64(_player->GetGUID());    
-	data.WriteBit(2);
+    data << uint64(_player->GetGUID());    
+    data.WriteBit(2);
     data.WriteBit(3);
     data.WriteBit(1);
     data.WriteBit(6);

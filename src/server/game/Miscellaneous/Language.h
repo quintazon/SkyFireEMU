@@ -17,8 +17,8 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __SKYFIRE_LANGUAGE_H
-#define __SKYFIRE_LANGUAGE_H
+#ifndef _SKYFIRE_LANGUAGE_H
+#define _SKYFIRE_LANGUAGE_H
 
 enum SkyFireStrings
 {
@@ -176,13 +176,13 @@ enum SkyFireStrings
     LANGUAGE_LIQUID_STATUS                  = 175,
     LANGUAGE_IS_NOTE                        = 176,
 
-    LANG_PHASING_REPORT_STATUS              = 176,
-    LANG_PHASING_NO_DEFINITIONS             = 177,              // Phasing
-    LANG_PHASING_SUCCESS                    = 178,
-    LANG_PHASING_FAILED                     = 179,
-    LANG_PHASING_LAST_PHASE                 = 180,
-    LANG_PHASING_LIST                       = 181,
-    LANG_PHASING_PHASEMASK                  = 182,
+    LANGUAGE_PHASING_REPORT_STATUS          = 176,
+    LANGUAGE_PHASING_NO_DEFINITIONS         = 177,              // Phasing
+    LANGUAGE_PHASING_SUCCESS                = 178,
+    LANGUAGE_PHASING_FAILED                 = 179,
+    LANGUAGE_PHASING_LAST_PHASE             = 180,
+    LANGUAGE_PHASING_LIST                   = 181,
+    LANGUAGE_PHASING_PHASEMASK              = 182,
     // Room for more level 1                183-199 not used
 
     // level 2 chat

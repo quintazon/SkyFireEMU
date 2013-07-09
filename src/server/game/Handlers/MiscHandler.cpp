@@ -1696,30 +1696,50 @@ void WorldSession::HandleReadyForAccountDataTimes(WorldPacket& /*recvData*/)
     SendAccountDataTimes(GLOBAL_CACHE_MASK);
 }
 
-void WorldSession::SendSetPhaseShift(uint32 PhaseShift, uint32 MapID)
-{
-    if (!_player)
-        return;
+void WorldSession::SendSetPhaseShift(std::set<uint32> const& phaseIds, std::set<uint32> const& terrainswaps)
+{	
+    WorldPacket data(SMSG_SET_PHASE_SHIFT, 1 + 8 + 4 + 4 + 4 + 4 + 2 * phaseIds.size() + 4 + terrainswaps.size() * 2);
+	data << uint64(_player->GetGUID());    
+	data.WriteBit(2);
+    data.WriteBit(3);
+    data.WriteBit(1);
+    data.WriteBit(6);
+    data.WriteBit(4);
+    data.WriteBit(5);
+    data.WriteBit(0);
+    data.WriteBit(7);
 
-    WorldPacket data(SMSG_SET_PHASE_SHIFT, 4);
-    data << uint64(_player->GetGUID());
-    data << uint32(0); // Count of bytes - Array1 - Unused
-    data << uint32(0); // Count of bytes - Array2 - TerrainSwap, unused.
+    data.WriteByteSeq(7);
+    data.WriteByteSeq(4);
 
-    data << uint32(2); // Count of bytes - Array3 - Phases
-    data << uint16(PhaseShift);
+    data << uint32(0);
+    //for (uint8 i = 0; i < worldMapAreaCount; ++i)
+    //    data << uint16(0);                    // WorldMapArea.dbc id (controls map display)
 
-    if (MapID)
-    {
-        data << uint32(2); // Count of bytes - Array4 - TerrainSwap
-        data << uint16(MapID);
-    }
-    else data << uint32(0);
+    data.WriteByteSeq(1);
 
-    if (!PhaseShift)
-        data << uint32(0x08);
-    else
-        data << uint32(0); // Flags (seem to be from Phase.dbc, not really sure)
+    data << uint32(0);  // flags (not phasemask)
+
+    data.WriteByteSeq(2);
+    data.WriteByteSeq(6);
+
+    data << uint32(0);                          // Inactive terrain swaps
+    //for (uint8 i = 0; i < inactiveSwapsCount; ++i)
+    //    data << uint16(0);
+
+    data << uint32(phaseIds.size()) * 2;        // Phase.dbc ids
+    for (std::set<uint32>::const_iterator itr = phaseIds.begin(); itr != phaseIds.end(); ++itr)
+        data << uint16(*itr);
+
+    data.WriteByteSeq(3);
+    data.WriteByteSeq(0);
+
+    data << uint32(terrainswaps.size()) * 2;    // Active terrain swaps
+    for (std::set<uint32>::const_iterator itr = terrainswaps.begin(); itr != terrainswaps.end(); ++itr)
+        data << uint16(*itr);
+
+    data.WriteByteSeq(5);
+
     SendPacket(&data);
 }
 

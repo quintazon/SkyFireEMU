@@ -1461,6 +1461,7 @@ void World::SetInitialWorldSettings()
 
     sLog->outString("Loading Spell Phase Dbc Info...");
     sObjectMgr->LoadSpellPhaseInfo();
+    sLog->outString();
 
     sLog->outString("Loading NPC Texts...");
     sObjectMgr->LoadGossipText();

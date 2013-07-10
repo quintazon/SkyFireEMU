@@ -18,6 +18,9 @@
 
 #include "PhaseMgr.h"
 #include "Chat.h"
+#include "Language.h"
+#include "ObjectMgr.h"
+#include "Player.h"
 
 //////////////////////////////////////////////////////////////////
 // Updating
@@ -105,18 +108,26 @@ void PhaseMgr::Recalculate()
 
 inline bool PhaseMgr::CheckDefinition(PhaseDefinition const* phaseDefinition)
 {
-    return sConditionMgr->IsObjectMeetToConditions(player, sConditionMgr->GetConditionsForPhaseDefinition(phaseDefinition->zoneId, phaseDefinition->entry));
+    ConditionList const* conditions = sConditionMgr->GetConditionsForPhaseDefinition(phaseDefinition->zoneId, phaseDefinition->entry);
+    if (!conditions)
+        return true;
+
+    ConditionSourceInfo srcInfo(player);
+    return sConditionMgr->IsObjectMeetToConditions(srcInfo, *conditions);
 }
 
-bool PhaseMgr::NeedsPhaseUpdateWithData(PhaseUpdateData const updateData) const
+bool PhaseMgr::NeedsPhaseUpdateWithData(PhaseUpdateData const& updateData) const
 {
     PhaseDefinitionStore::const_iterator itr = _PhaseDefinitionStore->find(player->GetZoneId());
     if (itr != _PhaseDefinitionStore->end())
     {
         for (PhaseDefinitionContainer::const_iterator phase = itr->second.begin(); phase != itr->second.end(); ++phase)
         {
-            ConditionList conditionList = sConditionMgr->GetConditionsForPhaseDefinition(phase->zoneId, phase->entry);
-            for (ConditionList::const_iterator condition = conditionList.begin(); condition != conditionList.end(); ++condition)
+            ConditionList const* conditionList = sConditionMgr->GetConditionsForPhaseDefinition(phase->zoneId, phase->entry);
+            if (!conditionList)
+                continue;
+
+            for (ConditionList::const_iterator condition = conditionList->begin(); condition != conditionList->end(); ++condition)
                 if (updateData.IsConditionRelated(*condition))
                     return true;
         }
@@ -174,34 +185,34 @@ void PhaseMgr::UnRegisterPhasingAuraEffect(AuraEffect const* auraEffect)
 
 void PhaseMgr::SendDebugReportToPlayer(Player* const debugger)
 {
-    ChatHandler(debugger).PSendSysMessage(LANGUAGE_PHASING_REPORT_STATUS, player->GetName(), player->GetZoneId(), player->getLevel(), player->GetTeamId(), _UpdateFlags);
+    ChatHandler(debugger->GetSession()).PSendSysMessage(LANGUAGE_PHASING_REPORT_STATUS, player->GetName(), player->GetZoneId(), player->getLevel(), player->GetTeamId(), _UpdateFlags);
 
     PhaseDefinitionStore::const_iterator itr = _PhaseDefinitionStore->find(player->GetZoneId());
     if (itr == _PhaseDefinitionStore->end())
-        ChatHandler(debugger).PSendSysMessage(LANGUAGE_PHASING_NO_DEFINITIONS, player->GetZoneId());
+        ChatHandler(debugger->GetSession()).PSendSysMessage(LANGUAGE_PHASING_NO_DEFINITIONS, player->GetZoneId());
     else
     {
         for (PhaseDefinitionContainer::const_iterator phase = itr->second.begin(); phase != itr->second.end(); ++phase)
         {
             if (CheckDefinition(&(*phase)))
-                ChatHandler(debugger).PSendSysMessage(LANGUAGE_PHASING_SUCCESS, phase->entry, phase->IsNegatingPhasemask() ? "negated Phase" : "Phase", phase->phasemask);
+                ChatHandler(debugger->GetSession()).PSendSysMessage(LANGUAGE_PHASING_SUCCESS, phase->entry, phase->IsNegatingPhasemask() ? "negated Phase" : "Phase", phase->phasemask);
             else
-                ChatHandler(debugger).PSendSysMessage(LANGUAGE_PHASING_FAILED, phase->phasemask, phase->entry, phase->zoneId);
+                ChatHandler(debugger->GetSession()).PSendSysMessage(LANGUAGE_PHASING_FAILED, phase->phasemask, phase->entry, phase->zoneId);
 
             if (phase->IsLastDefinition())
             {
-                ChatHandler(debugger).PSendSysMessage(LANGUAGE_PHASING_LAST_PHASE, phase->phasemask, phase->entry, phase->zoneId);
+                ChatHandler(debugger->GetSession()).PSendSysMessage(LANGUAGE_PHASING_LAST_PHASE, phase->phasemask, phase->entry, phase->zoneId);
                 break;
             }
         }
     }
 
-    ChatHandler(debugger).PSendSysMessage(LANGUAGE_PHASING_LIST, phaseData._PhasemaskThroughDefinitions, phaseData._PhasemaskThroughAuras, phaseData._CustomPhasemask);
+    ChatHandler(debugger->GetSession()).PSendSysMessage(LANGUAGE_PHASING_LIST, phaseData._PhasemaskThroughDefinitions, phaseData._PhasemaskThroughAuras, phaseData._CustomPhasemask);
 
-    ChatHandler(debugger).PSendSysMessage(LANGUAGE_PHASING_PHASEMASK, phaseData.GetPhaseMaskForSpawn(), player->GetPhaseMask());
+    ChatHandler(debugger->GetSession()).PSendSysMessage(LANGUAGE_PHASING_PHASEMASK, phaseData.GetPhaseMaskForSpawn(), player->GetPhaseMask());
 }
 
-void PhaseMgr::SetCustomPhase(uint32 const phaseMask)
+void PhaseMgr::SetCustomPhase(uint32 phaseMask)
 {
     phaseData._CustomPhasemask = phaseMask;
 
@@ -216,7 +227,7 @@ void PhaseMgr::SetCustomPhase(uint32 const phaseMask)
 uint32 PhaseData::GetCurrentPhasemask() const
 {
     if (player->isGameMaster())
-        return PHASEMASK_ANYWHERE;
+        return uint32(PHASEMASK_ANYWHERE);
 
     if (_CustomPhasemask)
         return _CustomPhasemask;
@@ -289,7 +300,7 @@ void PhaseData::AddPhaseDefinition(PhaseDefinition const* phaseDefinition)
     activePhaseDefinitions.push_back(phaseDefinition);
 }
 
-void PhaseData::AddAuraInfo(uint32 const spellId, PhaseInfo phaseInfo)
+void PhaseData::AddAuraInfo(uint32 spellId, PhaseInfo const& phaseInfo)
 {
     if (phaseInfo.phasemask)
         _PhasemaskThroughAuras |= phaseInfo.phasemask;
@@ -297,7 +308,7 @@ void PhaseData::AddAuraInfo(uint32 const spellId, PhaseInfo phaseInfo)
     spellPhaseInfo[spellId] = phaseInfo;
 }
 
-uint32 PhaseData::RemoveAuraInfo(uint32 const spellId)
+uint32 PhaseData::RemoveAuraInfo(uint32 spellId)
 {
     PhaseInfoContainer::const_iterator rAura = spellPhaseInfo.find(spellId);
     if (rAura != spellPhaseInfo.end())
@@ -321,14 +332,14 @@ uint32 PhaseData::RemoveAuraInfo(uint32 const spellId)
 
         return updateflag;
     }
-    else
-        return 0;
+
+    return 0;
 }
 
 //////////////////////////////////////////////////////////////////
 // Phase Update Data
 
-void PhaseUpdateData::AddQuestUpdate(uint32 const questId)
+void PhaseUpdateData::AddQuestUpdate(uint32 questId)
 {
     AddConditionType(CONDITION_QUESTREWARDED);
     AddConditionType(CONDITION_QUESTTAKEN);
@@ -352,7 +363,7 @@ bool PhaseUpdateData::IsConditionRelated(Condition const* condition) const
     }
 }
 
-bool PhaseMgr::IsConditionTypeSupported(ConditionTypes const conditionType)
+bool PhaseMgr::IsConditionTypeSupported(ConditionTypes conditionType)
 {
     switch (conditionType)
     {
@@ -370,3 +381,4 @@ bool PhaseMgr::IsConditionTypeSupported(ConditionTypes const conditionType)
             return false;
     }
 }
+

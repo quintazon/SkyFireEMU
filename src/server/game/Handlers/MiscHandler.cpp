@@ -1718,7 +1718,7 @@ void WorldSession::SendSetPhaseShift(std::set<uint32> const& phaseIds, std::set<
 
     data.WriteByteSeq(1);
 
-    data << uint32(0);  // flags (not phasemask)
+    data << uint32(phaseIds.size() ? 0 : 8);  // flags (not phasemask)
 
     data.WriteByteSeq(2);
     data.WriteByteSeq(6);
